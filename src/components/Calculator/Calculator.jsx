@@ -1,91 +1,190 @@
-import { useRef, useReducer } from 'react';
-import './Calculator.css';
+import React, { useReducer, useMemo } from 'react';
 
-const forceUpdateReducer = (x) => x + 1;
+const initialState = {
+  firstNumber: null,
+  secondNumber: '',
+  operation: null,
+  result: null,
+  history: []
+};
+
+function reducer(state, action) {
+  switch (action.type) {
+    case 'SET_FIRST_NUMBER':
+      return {
+        ...state,
+        firstNumber: action.payload,
+        secondNumber: '',
+        result: null
+      };
+    case 'SET_SECOND_NUMBER':
+      return { ...state, secondNumber: action.payload };
+    case 'SET_OPERATION':
+      return { ...state, operation: action.payload };
+    case 'CALCULATE':
+      if (
+        state.firstNumber === null ||
+        state.operation === null ||
+        state.secondNumber === ''
+      ) {
+        return state; // no calcular si falta algo
+      }
+      const a = state.firstNumber;
+      const b = Number(state.secondNumber);
+      let res;
+      switch (state.operation) {
+        case '+':
+          res = a + b;
+          break;
+        case '-':
+          res = a - b;
+          break;
+        case '*':
+          res = a * b;
+          break;
+        case '/':
+          res = b !== 0 ? a / b : 'Error';
+          break;
+        default:
+          res = 'Error';
+      }
+      return {
+        ...state,
+        result: res,
+        history:
+          res !== 'Error'
+            ? [...state.history, res].sort((x, y) => x - y)
+            : state.history,
+        firstNumber: null,
+        secondNumber: '',
+        operation: null
+      };
+    case 'CLEAR':
+      return initialState;
+    default:
+      return state;
+  }
+}
 
 const Calculator = () => {
-  const inputRef = useRef(null);
-  const firstNumberRef = useRef(null);
-  const operationRef = useRef(null);
-  const lastResultRef = useRef(null);
-  const historyRef = useRef([]);
-  const [, forceUpdate] = useReducer(forceUpdateReducer, 0); // para forzar render
+  const [state, dispatch] = useReducer(reducer, initialState);
 
-  const chooseOperation = (op) => {
-    const val = Number(inputRef.current.value);
-    if (isNaN(val)) return;
-
-    firstNumberRef.current = val;
-    operationRef.current = op;
-    inputRef.current.value = '';
-  };
-
-  const calculate = () => {
-    const secondVal = Number(inputRef.current.value);
-    const firstVal = firstNumberRef.current;
-    const op = operationRef.current;
-
-    if (isNaN(secondVal) || firstVal === null || !op) return;
-
-    let result;
-    switch (op) {
+  const memoResult = useMemo(() => {
+    if (
+      state.firstNumber === null ||
+      state.operation === null ||
+      state.secondNumber === ''
+    ) {
+      return null;
+    }
+    const a = state.firstNumber;
+    const b = Number(state.secondNumber);
+    switch (state.operation) {
       case '+':
-        result = firstVal + secondVal;
-        break;
+        return a + b;
       case '-':
-        result = firstVal - secondVal;
-        break;
+        return a - b;
       case '*':
-        result = firstVal * secondVal;
-        break;
+        return a * b;
       case '/':
-        result = secondVal !== 0 ? firstVal / secondVal : 'Error';
-        break;
+        return b !== 0 ? a / b : 'Error';
       default:
-        result = 'Error';
+        return 'Error';
     }
-
-    if (result !== 'Error') {
-      historyRef.current.push(result);
-      historyRef.current.sort((a, b) => a - b);
-    }
-
-    lastResultRef.current = result;
-    inputRef.current.value = '';
-    firstNumberRef.current = null;
-    operationRef.current = null;
-
-    forceUpdate(); // fuerza el render para ver los cambios
-  };
+  }, [state.firstNumber, state.secondNumber, state.operation]);
 
   return (
-    <div className='calculator'>
-      <input type='number' ref={inputRef} placeholder='Ingresa un número' />
+    <div
+      className='calculator'
+      style={{ maxWidth: 300, margin: 'auto', textAlign: 'center' }}
+    >
+      <input
+        type='number'
+        placeholder={
+          state.firstNumber === null
+            ? 'Ingresa primer número'
+            : 'Ingresa segundo número'
+        }
+        value={state.secondNumber}
+        onChange={(e) =>
+          dispatch({ type: 'SET_SECOND_NUMBER', payload: e.target.value })
+        }
+        disabled={state.firstNumber === null ? false : false}
+        style={{ width: '100%', padding: 10, marginBottom: 10, fontSize: 18 }}
+      />
 
-      <div className='buttons'>
-        <button onClick={() => chooseOperation('+')}>+</button>
-        <button onClick={() => chooseOperation('-')}>-</button>
-        <button onClick={() => chooseOperation('*')}>*</button>
-        <button onClick={() => chooseOperation('/')}>/</button>
-        <button onClick={calculate}>=</button>
-      </div>
-
-      {lastResultRef.current !== null && (
-        <div className='result'>
-          <strong>Último resultado:</strong> {lastResultRef.current}
+      {state.firstNumber === null ? (
+        <div className='buttons' style={{ marginBottom: 10 }}>
+          <button
+            onClick={() =>
+              dispatch({
+                type: 'SET_FIRST_NUMBER',
+                payload: Number(state.secondNumber)
+              })
+            }
+            disabled={state.secondNumber === ''}
+          >
+            Guardar número
+          </button>
+        </div>
+      ) : (
+        <div
+          className='buttons'
+          style={{
+            display: 'flex',
+            justifyContent: 'space-around',
+            marginBottom: 10
+          }}
+        >
+          {['+', '-', '*', '/'].map((op) => (
+            <button
+              key={op}
+              onClick={() => dispatch({ type: 'SET_OPERATION', payload: op })}
+            >
+              {op}
+            </button>
+          ))}
+          <button onClick={() => dispatch({ type: 'CALCULATE' })}>=</button>
         </div>
       )}
 
-      {historyRef.current.length > 0 && (
-        <div className='history'>
+      {memoResult !== null && (
+        <div>
+          <strong>Resultado (en vivo):</strong> {memoResult}
+        </div>
+      )}
+
+      {state.result !== null && (
+        <div style={{ marginTop: 15 }}>
+          <strong>Último resultado:</strong> {state.result}
+        </div>
+      )}
+
+      {state.history.length > 0 && (
+        <div style={{ marginTop: 15, textAlign: 'left' }}>
           <strong>Historial ordenado:</strong>
           <ul>
-            {historyRef.current.map((res, i) => (
+            {state.history.map((res, i) => (
               <li key={i}>{res}</li>
             ))}
           </ul>
         </div>
       )}
+
+      <button
+        onClick={() => dispatch({ type: 'CLEAR' })}
+        style={{
+          marginTop: 20,
+          backgroundColor: '#f44336',
+          color: 'white',
+          border: 'none',
+          padding: '10px',
+          borderRadius: '5px',
+          cursor: 'pointer'
+        }}
+      >
+        Reiniciar
+      </button>
     </div>
   );
 };
