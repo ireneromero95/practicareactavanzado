@@ -1,0 +1,24 @@
+.timer-container {
+  max-width: 300px;
+  margin: 2rem auto; /* centra horizontalmente y da margen arriba/abajo */
+  padding: 1.5rem 2rem;
+  background-color: #f7f9fc; /* fondo clarito */
+  border-radius: 12px; /* bordes redondeados */
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1); /* sombra sutil */
+  text-align: center; /* centra el texto */
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  color: #333;
+  user-select: none; /* evita que el texto se seleccione por accidente */
+}
+
+.timer-container h3 {
+  margin-bottom: 0.75rem;
+  font-weight: 600;
+  color: #0077cc;
+}
+
+.timer-container p {
+  font-size: 1.6rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
